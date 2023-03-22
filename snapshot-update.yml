@@ -1,0 +1,63 @@
+---
+- name: Take snapshot of Ubuntu VM and perform monthly updates
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    vm_name: "Ubuntu 64-bit 22.04"
+    snapshot_name: "pre-update"
+    snapshot_desc: "Snapshot taken before monthly updates"
+    datastore_path: C:\Users\SBS\Documents\Virtual Machines\Ubuntu 64-bit (2)
+
+  
+  tasks:
+
+    - name: Create snapshot folder
+      vmware_folder:
+        hostname: localhost
+        username: ubuntu
+        password: ubuntu
+        validate_certs: no
+        datacenter: dc1
+        folder_type: vm
+        name: "{{ snapshot_name }}"
+        parent: "{{ vm_name }}"
+
+        
+    - name: Take snapshot of virtual machine
+      local_action:
+        module: vmware_guest_snapshot
+        hostname: localhost
+        username: ubuntu
+        password: ubuntu
+        validate_certs: no
+        datacenter: dc1
+        vm_id: "{{ vm_name }}"
+        name: "{{ snapshot_name }}"
+        description: "Snapshot taken before package updates"
+
+
+    - name: Update all installed packages using APT tool
+      become: yes
+      apt:
+        update_cache: yes
+        upgrade: dist
+        autoremove: yes
+
+    - name: Reboot if required after update
+      become: yes
+      reboot:
+        reboot_timeout: 3600
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        connect_timeout: 10
+        reboot_timeout_warning: 300
+        test_command: uptime
+        msg: "Reboot initiated by Ansible after monthly updates"
+
+    #- name: Reboot if updates were installed
+     # become: yes
+      #reboot:
+       # apply_updates: yes
+      #when: update_result.changed
