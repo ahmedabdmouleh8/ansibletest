@@ -1,0 +1,54 @@
+---
+- name: Take local VM snapshot
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    vm_name: "Ubuntu 64-bit 22.04"
+    snapshot_name: "pre-update"
+    
+  tasks:
+    - name: Create snapshot and update package
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    vm_name: "Ubuntu 64-bit (2)"
+    snapshot_name: "pre-update"
+  tasks:
+    - name: Create snapshot folder
+      file:
+        path: /var/snapshots
+        state: directory
+
+    - name: Take snapshot of virtual machine
+      local_action:
+        module: vmware_guest_snapshot
+        hostname: localhost
+        username: ubuntu
+        password: ubuntu
+        validate_certs: no
+        datacenter: dc1
+        name: "{{ vm_name }}"
+        snapshot_name: "{{ snapshot_name }}"
+        folder: C:\Users\SBS\Documents\Virtual Machines\
+        description: "Snapshot taken before package updates"
+
+    - name: Update package
+      apt:
+        update_cache: yes
+        upgrade: dist
+      become: yes
+      become_user: root
+
+    - name: Delete snapshot of virtual machine
+      local_action:
+        module: vmware_guest_snapshot
+        hostname: localhost
+        username: ubuntu
+        password: ubuntu
+        validate_certs: no
+        datacenter: dc1
+        vm_id: "{{ vm_name }}"
+        name: "{{ snapshot_name }}"
+        state: absent
